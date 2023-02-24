@@ -1,0 +1,7 @@
+audio - Copy.wav : C:\filedump\audio - Copy.wav could not be copied! -> [Errno 22] Invalid argument: 'C:\\DestDirNo-Path-Found\\'
+RedNMX - Copy.log : C:\filedump\alpine\fodler\RedNMX - Copy.log could not be copied! -> [Errno 22] Invalid argument: 'C:\\DestDirNo-Path-Found\\'
+audio - Copy.wav : C:\filedump\audio - Copy.wav could not be copied! -> [Errno 13] Permission denied: 'C:\\DestDirNo-Path-Found'
+RedNMX - Copy.log : C:\filedump\alpine\fodler\RedNMX - Copy.log could not be copied! -> [Errno 13] Permission denied: 'C:\\DestDirNo-Path-Found'
+RedNMX - Copy.log : C:\filedump\alpine\fodler\RedNMX - Copy.log could not be copied! -> [WinError 183] Cannot create a file when that file already exists: 'C:\\DestDir\\No-Path-Found'
+RedNMXshtuff.log : C:\filedump\alpine\fodler\RedNMXshtuff.log could not be copied! -> [WinError 183] Cannot create a file when that file already exists: 'C:\\DestDir\\No-Path-Found'
+testfile.exe : C:\filedump\Test\evenmore\testfile.exe could not be copied! -> [WinError 183] Cannot create a file when that file already exists: 'C:\\DestDir\\No-Path-Found'

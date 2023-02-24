@@ -1,10 +1,9 @@
 import logging
 import pickle
-import time
-import datetime
-import re
 from os import walk
 from os import path
+from os import makedirs
+from shutil import copy2
 
 SAVED_FILE_PATH = 'file-paths-dictionary.pkl'
 file_paths_dict = {}
@@ -12,6 +11,7 @@ error = False
 
 
 def logAction(txtFile, message):
+    # Appends a text file with a message
     global error
     try:
         with open(txtFile, "a") as f:
@@ -23,7 +23,7 @@ def logAction(txtFile, message):
 
 
 def log_event(print_message='', log_info='', log_warning='', log_error=''):
-    # Used for logging events
+    # Used for logging events in the .log
 
     if print_message != '':
         print(print_message)
@@ -35,13 +35,14 @@ def log_event(print_message='', log_info='', log_warning='', log_error=''):
         logging.error(log_error)
 
 
-def dump_dict():
+def dump_dict(dict):
+    # saves a dictionary object as a pickle file-type
     global error
     log_event(print_message='Attempting to save file paths from dictionary from "' + SAVED_FILE_PATH + '"\n',
-                  log_info='Attempting to save file paths from dictionary from "' + SAVED_FILE_PATH + '"')
+              log_info='Attempting to save file paths from dictionary from "' + SAVED_FILE_PATH + '"')
     try:
         with open(SAVED_FILE_PATH, 'wb') as f:
-            pickle.dump(file_paths_dict, f)
+            pickle.dump(dict, f)
         log_event(print_message='Saved file paths dictionary to "' + SAVED_FILE_PATH + '"',
                   log_info='Saved file paths dictionary to "' + SAVED_FILE_PATH + '"')
 
@@ -54,12 +55,13 @@ def dump_dict():
 
 
 def load_dict():
+    # sets a dictionary object from a pickle file-type source in the directory
     try:
         global file_paths_dict, error
 
         log_event(print_message='Attempting to load file paths from dictionary from "' + SAVED_FILE_PATH + '"\n',
                   log_info='Attempting to load file paths from dictionary from "' + SAVED_FILE_PATH + '"')
-        
+
         with open(SAVED_FILE_PATH, 'rb') as f:
             file_paths_dict = pickle.load(f)
 
@@ -84,51 +86,68 @@ def copy_files(sourceDirectory, destinationDirectory):
     try:
         for root, directory, files in walk(sourceDirectory):
             for file_name in files:
-                # Check if it exists, if so, copy it
                 try:
+                    # Check if it exists, if so, copy it
                     if file_name in file_paths_dict:
-                        #copy file
+                        # Make directory if needed
+                        if not path.exists(path.dirname(destinationDirectory + file_paths_dict[file_name])):
+                            makedirs(path.dirname(destinationDirectory + file_paths_dict[file_name]))
+                        #Copy file and print message
+                        print(path.join(root, file_name) + ' -> ' + destinationDirectory + file_paths_dict[file_name])
+                        copy2(path.join(root, file_name), path.dirname(destinationDirectory + file_paths_dict[file_name]))
                         files_moved_success += 1
                     else:
-                        # add to unknown folder
-                        # log-action No-Path-Found.txt
-                        #try copy file to No-Path-Found folder
+                        # add to unknown folder since this file was not found in dictionary
+                        if not path.exists(path.join(destinationDirectory, 'No-Path-Found')):
+                            makedirs(path.join(destinationDirectory, 'No-Path-Found'))
+
+                        logAction('No-Path-Found.txt',
+                                  path.join(root, file_name) + ' is unknown.\n' +
+                                  'Moving to ' + destinationDirectory + '\\No-Path-Found\\' + file_name)
+                        # try copy file to No-Path-Found folder
+                        print(path.join(root, file_name) + ' -> ' + destinationDirectory + '\\No-Path-Found\\' + file_name)
+                        copy2(path.join(root, file_name), path.join(destinationDirectory, 'No-Path-Found'))
                         files_not_found += 1
                 except Exception as e:
-                    log_event(print_message='Exception in saving file paths! : \n\t' + str(e),
-                              log_error='Exception in saving file paths! : \n\t' + str(e))
-                    #log-action errors.txt
+                    logAction('errors.txt', file_name + ' : ' + path.join(root, file_name) +
+                              ' could not be copied! -> ' + str(e) + '\n')
+                    log_event(print_message=file_name + ' : ' + path.join(root, file_name) +
+                                            ' could not be copied! -> ' + str(e),
+                              log_error=file_name + ' : ' + path.join(root, file_name) +
+                                        ' could not be copied! -> ' + str(e))
                     error = True
                     files_not_moved += 1
-                
 
         message = '\nComplete!\n' + \
                   'Total files moved successfully: ' + str(files_moved_success)
-                  
+
         if files_not_found > 0:
-               message = message + '\nTotal files with-out a path saved (see No-Path-Found.txt) : ' + str(files_not_found)
-        
+            message = message + '\nFiles moved to No-Path-Found: ' + str(files_not_found) + ' (see No-Path-Found.txt)'
+
         if files_not_moved > 0:
-               message = message + '\nTotal files not moved due to error (see errors.txt for errors): ' + str(files_not_moved)
-               
+            message = message + '\nFiles not moved: ' + str(files_not_moved) + ' (see errors.txt for errors)'
+
         log_event(print_message=message,
                   log_info=message)
-        
 
     except Exception as e:
         log_event(
-            print_message='Exception in saving file paths! : \n\t' + str(e),
-            log_error='Exception in saving file paths! : \n\t' + str(e))
+            print_message='Exception while coping files!! : \n\t' + str(e),
+            log_error='Exception while coping files! : \n\t' + str(e))
         error = True
 
 
 def show_examples(parentDirectory):
     print('These are some examples of where it will copy files to with their full paths: ')
-    print(parentDirectory + file_paths_dict[get_nth_key(file_paths_dict, 1)])
-    print(parentDirectory + file_paths_dict[get_nth_key(file_paths_dict, 2)])
-    print(parentDirectory + file_paths_dict[get_nth_key(file_paths_dict, 9)])
-    print(parentDirectory + file_paths_dict[get_nth_key(file_paths_dict, 15)])
-    print(parentDirectory + file_paths_dict[get_nth_key(file_paths_dict, 20)])
+    try:
+        print(parentDirectory + file_paths_dict[get_nth_key(file_paths_dict, 1)])
+        print(parentDirectory + file_paths_dict[get_nth_key(file_paths_dict, 2)])
+        print(parentDirectory + file_paths_dict[get_nth_key(file_paths_dict, 9)])
+        print(parentDirectory + file_paths_dict[get_nth_key(file_paths_dict, 15)])
+        print(parentDirectory + file_paths_dict[get_nth_key(file_paths_dict, 20)])
+    except IndexError as e:
+        print(str(e))
+        return
 
 
 def get_nth_key(dictionary, n=0):
@@ -157,19 +176,24 @@ def save_file_paths(full_path):
                 else:
                     # add to dictionary
                     new_file_path = path.join(root.replace(full_path, ''), file_name)
+                    # Add backslash if needed
+                    if new_file_path[0] != '\\':
+                        new_file_path = '\\' + new_file_path
+
                     file_paths_dict[file_name] = new_file_path
                     log_event(print_message=file_name + ' : ' + new_file_path,
                               log_info=file_name + ' : ' + new_file_path)
                     files_found += 1
 
-        dump_dict()
+        # save dictionary
+        dump_dict(file_paths_dict)
 
         message = '\nComplete!\n' + \
                   'Total files found: ' + str(files_found) + \
                   '\nTotal file paths saved : ' + str(len(file_paths_dict))
         log_event(print_message=message,
                   log_info=message)
-        
+
         if files_found > len(file_paths_dict):
             log_event(print_message='\nDuplicate files can not be saved with this process. See Duplicate-Files.txt',
                       log_info='\nDuplicate files can not be saved with this process. See Duplicate-Files.txt')
@@ -183,35 +207,44 @@ def save_file_paths(full_path):
 
 def choose_mode():
     try:
-
-        mode = input('[1] Save the locations of these files?\n'
+        mode = input('\n[1] Save the locations of these files?\n'
                      '[2] Restructure and copy these files based on saved data?\n'
                      'Enter 1 or 2. : ')
-        #Copy files mode
+        # Copy files mode
         if '2' in mode:
-            sourceDirectory = input("Enter the parent directory of the files to copy to new locations : ")
-            newDirectory = input("Enter the new base directory to copy the files to : ")
-            if load_dict:
+            sourceDirectory = input("Enter the source directory of the files to copy : ").strip()
+
+            if not path.isdir(sourceDirectory):
+                print('This path doesnt exist.')
+                choose_mode()
+                return
+
+            newDirectory = input("Enter the new destination directory : ").strip()
+
+            if newDirectory[-1] == '\\':
+                newDirectory = newDirectory.rstrip(newDirectory[-1])
+
+            if load_dict():
+                print(file_paths_dict)
                 print('\nDestination Directory path: ' + newDirectory +
                       ', all files will be copied here with any appending path.\n')
                 print('Source Directory path: ' + sourceDirectory +
                       ', all files in this path will be copied to the new locations saved.\n')
                 show_examples(newDirectory)
-                if input('\nAre these the correct paths? (Y/N) - Y will begin the process. : ').lower == 'y':
+                if input('\nAre these the correct paths? (Y/N) - Y will begin the process. : ').lower().strip() == 'y':
                     copy_files(sourceDirectory, newDirectory)
                 else:
                     print('User Canceled.')
                     choose_mode()
             else:
                 choose_mode()
-        #Save locations
+        # Save locations
         elif '1' in mode:
-            parentDirectory = input("Enter the source directory to save file locations: ")
+            parentDirectory = input("Enter the source directory to save file locations: ").strip()
             print('\nFull search path is: ' + parentDirectory +
                   ', all files and sub-folders will be searched in this directory.\n')
 
             if input('Is this the correct path? (Y/N) - Y will begin the process. : ').lower().strip() == 'y':
-                print('Files with-out a saved path can be found in ' + parentDirectory + '\\No-Path-Found')
                 save_file_paths(parentDirectory)
             else:
                 print('User Canceled.')
@@ -244,15 +277,12 @@ def main():
     print(
         'In the "copy mode" This will load in the dictionary from the pickle file, then search all files in all sub-directories of the parent directory you give it.\n'
         'It checks for a path found in the dictionary for each file, if its found it will copy the file, creating the directory, preserving as much data as possible from the original file properties(like time stamps).\n'
-        'It will log any errors, and copy any files it does not have a path saved for into a "No-Path-Found" folder.\n\n')
-    while True:
-        try:
-            choose_mode()
-        except Exception as e:
-            log_event(print_message='Exception in main()!\n\t' + str(e),
-                      log_error='Exception in main()!\n\t' + str(e))
+        'It will log any errors, and copy any files it does not have a path saved for into a "No-Path-Found" folder.\n')
+
+    choose_mode()
+
     if error:
-        print('1 or more errors occurred. Please check the log for more information.')
+        print('\n1 or more errors occurred. Please check the log and errors.txt for more information.')
 
     logging.info('End of main()')
 
